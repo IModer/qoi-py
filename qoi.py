@@ -1,5 +1,3 @@
-#from math import log2
-
 ###CONSTANTS###
 QOI_SRGB   = 0
 QOI_LINEAR = 1
@@ -22,32 +20,6 @@ def QOI_COLOR_HASH(C: tuple):
     (r,g,b,a) = C
     return (r*3 + g*5 + b*7 + a*11)
 
-# def QOI_COLOR_HASH(C):
-#     (r,g,b,a) = C
-#     return (ungroup(r)*3 + ungroup(g)*5 + ungroup(b)*7 + ungroup(a)*11)
-
-
-# def group(n, b):
-#     if b == -1:
-#         b = round(log2(n) / 8)
-#     a = list(map(int, list(str(bin(n))[2:])))
-#     return [0 for x in range((b * 8) - len(a))] + a
-
-# def ungroup(l):
-#     a = ""
-#     for x in l:
-#         a += str(x)
-#     if a == '':
-#         return 0
-#     return int(a, 2)
-
-# def qoi_write_n(bytes, p, n, v):
-#     #write n bit from v to bytes
-#     #return the opostition in bytes (p)
-#     bytes[p:p+n] = v
-    
-#     return p+n
-
 def qoi_write_32(bytes: bytearray, v: int):
     #write 4 bytes from v to bytes
     #return the opostition in bytes (p)
@@ -60,12 +32,6 @@ def qoi_write_32(bytes: bytearray, v: int):
     bytes[i+1] = (0x00ff0000 & v) >> 16
     bytes[i+2] = (0x0000ff00 & v) >>  8
     bytes[i+3] = (0x000000ff & v)
-
-# def qoi_read_n(bytes, p, n):
-#     #read 32 bits from bytes
-#     #return the bits and the position in bytes (p)
-#     a = bytes[p:p+n];
-#     return (a, p+n)
 
 class qoi_desc():
     def __init__(self, width: int, height: int,  channels: int , colorspace: int) -> None:
@@ -93,12 +59,10 @@ def qoi_encode(data: bytearray, desc: qoi_desc) -> bytearray:
     #this is where the converted image will be 
 
     bytes = bytearray()
-    #bytes = [0 for _ in range(maxsize)]
 
     #index is a 64 long list of bytes
     
     index = [(0,0,0,0) for _  in range(64)]
-    #index = [0 for _ in range(64 * 8)]
 
     #writer the desc header to bytes
 
@@ -107,11 +71,6 @@ def qoi_encode(data: bytearray, desc: qoi_desc) -> bytearray:
     qoi_write_32(bytes, desc.height)
     bytes.append(desc.channels)
     bytes.append(desc.colorspace)    #1 byte
-    # p = qoi_write_n(bytes, p, 32, group(QOI_MAGIC, 4))
-    # p = qoi_write_n(bytes, p, 32, group(desc.width, 4))
-    # p = qoi_write_n(bytes, p, 32, group(desc.height, 4))
-    # p = qoi_write_n(bytes, p, 8,  group(desc.channels, 1))
-    # p = qoi_write_n(bytes, p, 8,  group(desc.colorspace, 1))
 
     pixels = data  # bytearray()
 
@@ -137,11 +96,6 @@ def qoi_encode(data: bytearray, desc: qoi_desc) -> bytearray:
                   pixels[px_pos+1],
                   pixels[px_pos+2],
                   pixels[px_pos+3])
-
-            # px = (pixels[px_pos:px_pos+8], 
-            #       pixels[px_pos+8:px_pos+8*2],
-            #       pixels[px_pos+8*2:px_pos+8*3],
-            #       pixels[px_pos+8*3:px_pos+8*4])
         else:
             # we read 3 bytes
 
@@ -150,11 +104,6 @@ def qoi_encode(data: bytearray, desc: qoi_desc) -> bytearray:
                   pixels[px_pos+2],
                   255)
 
-            # px = (pixels[px_pos:px_pos+8], 
-            #       pixels[px_pos+8:px_pos+8*2],
-            #       pixels[px_pos+8*2:px_pos+8*3],
-            #       255)
-
         #Method 1: runs
         # if current px and prev px are the same we record a QOI_OP_RUN
         if px == px_prev:
@@ -162,7 +111,6 @@ def qoi_encode(data: bytearray, desc: qoi_desc) -> bytearray:
             if (run == 62 or px_pos == px_end):
 
                 bytes.append(QOI_OP_RUN | (run-1))
-                #p = qoi_write_n(bytes, p, 8, group(QOI_OP_RUN | (run-1), 1))
                 run = 0
         else:
             #Method 2: index
@@ -172,25 +120,14 @@ def qoi_encode(data: bytearray, desc: qoi_desc) -> bytearray:
             if (run > 0):
 
                 bytes.append(QOI_OP_RUN | (run-1))
-                #p = qoi_write_n(bytes, p, 8, group(QOI_OP_RUN | (run-1), 1))
                 run = 0
             
             index_pos = QOI_COLOR_HASH(px) % 64
-
-            # We read the pixel from the index
-
-            
-
-            # px_ind = (index[index_pos:index_pos+8], 
-            #          index[index_pos+8:index_pos+8*2],
-            #          index[index_pos+8*2:index_pos+8*3],
-            #          index[index_pos+8*3:index_pos+8*4])
             
 
             if (index[index_pos] == px):
 
                 bytes.append(QOI_OP_INDEX | index_pos)
-                #p = qoi_write_n(bytes, p, 8, group(QOI_OP_INDEX | index_pos, 1))
             else:
                 # Method 3: color diff
                 # if we can record the color diff of prev px and curr px then we do
@@ -200,22 +137,12 @@ def qoi_encode(data: bytearray, desc: qoi_desc) -> bytearray:
 
                 index[index_pos] = px
 
-                # (r, g, b, a) = px
-                # index[index_pos:index_pos+8]       = r
-                # index[index_pos+8:index_pos+8*2]   = g
-                # index[index_pos+8*2:index_pos+8*3] = b
-                # index[index_pos+8*3:index_pos+8*4] = a
-
                 # if the alpha channels match then we try to record the diff
                 if (px[3] == px_prev[3]):
                     
                     vr = px[0] - px_prev[0]
                     vg = px[1] - px_prev[1]
                     vb = px[2] - px_prev[2]
-                    
-                    # vr = ungroup(r) - ungroup(px_prev[0])
-                    # vg = ungroup(g) - ungroup(px_prev[1])
-                    # vb = ungroup(b) - ungroup(px_prev[2])
 
                     vg_r = vr - vg
                     vg_b = vb - vg
@@ -228,7 +155,6 @@ def qoi_encode(data: bytearray, desc: qoi_desc) -> bytearray:
                         towrite = QOI_OP_DIFF | (vr + 2) << 4 | (vg + 2) << 2 | (vb + 2)
                         
                         bytes.append(towrite)
-                        #p = qoi_write_n(bytes, p, 8, group(towrite, 1))
                     # Luma DIFF
                     elif (vg_r >  -9 and vg_r <  8 and
                           vg   > -33 and vg   < 32 and
@@ -236,8 +162,6 @@ def qoi_encode(data: bytearray, desc: qoi_desc) -> bytearray:
                         
                         bytes.append(QOI_OP_LUMA     | (vg   + 32))
                         bytes.append((vg_r + 8) << 4 | (vg_b + 8))
-                        #p = qoi_write_n(bytes, p, 8, group(QOI_OP_LUMA     | (vg   + 32), 1))
-                        #p = qoi_write_n(bytes, p, 8, group((vg_r + 8) << 4 | (vg_b +  8), 1))
                     
                     # NORMAL RGB
                     else:
@@ -247,10 +171,6 @@ def qoi_encode(data: bytearray, desc: qoi_desc) -> bytearray:
                         bytes.append(px[1])
                         bytes.append(px[2])
                         
-                        # p = qoi_write_n(bytes, p, 8, group(QOI_OP_RGB, 1))
-                        # p = qoi_write_n(bytes, p, 8, r)
-                        # p = qoi_write_n(bytes, p, 8, g)
-                        # p = qoi_write_n(bytes, p, 8, b)
                 # NORMAL RGBA
                 else:
                     
@@ -259,12 +179,6 @@ def qoi_encode(data: bytearray, desc: qoi_desc) -> bytearray:
                     bytes.append(px[1])
                     bytes.append(px[2])
                     bytes.append(px[3])
-                    
-                    # p = qoi_write_n(bytes, p, 8, group(QOI_OP_RGBA, 1))
-                    # p = qoi_write_n(bytes, p, 8, r)
-                    # p = qoi_write_n(bytes, p, 8, g)
-                    # p = qoi_write_n(bytes, p, 8, b)
-                    # p = qoi_write_n(bytes, p, 8, a)
         
         px_prev = px
         px_pos += channels
@@ -273,36 +187,131 @@ def qoi_encode(data: bytearray, desc: qoi_desc) -> bytearray:
     for x in qoi_padding:
         bytes.append(x)
 
-        #p = qoi_write_n(bytes, p, 8, group(x,1))
-
     return bytes
 
-def qoi_decode(data, size: int, desc: qoi_desc, channels: int) -> None:
-    pass
+def bti(b: bytearray) -> int:
+    return int(b.hex(), 16)
+
+def qoi_decode(data: bytearray, size: int, channels: int) -> bytearray:
+    # read the desc from data
+    # desc is the first 14 bytes
+
+    p = 4
+    desc = qoi_desc(
+        bti(data[p:p+4]),
+        bti(data[p+4:p+8]),
+        data[p+8],
+        data[p+9]
+    )
+    p = 14
+
+
+    if (data == None or (channels != 0 and channels != 3 and channels != 4) or
+        size < QOI_HEADER_SIZE + len(qoi_padding) or 
+        desc.width == 0 or desc.height == 0 or
+        desc.channels < 3 or desc.channels > 4 or
+        desc.colorspace > 1 or
+        data[0:4] != b'qoif' or
+        desc.height >= QOI_PIXELS_MAX / desc.width):
+        return None
+
+    index = [(0,0,0,0) for _  in range(64)]
+    px = (0,0,0,255)
+    run = 0
+    bytes = data
+
+    if (channels == 0):
+        channels = desc.channels
+
+    px_len = desc.width * desc.height * channels;
+    pixels = bytearray(px_len)
+
+    chunks_len = size - len(qoi_padding);
+
+    px_pos = 0
+    while(px_pos < px_len):
+        if (run > 0):
+            run -= 1
+        elif (p < chunks_len):
+            b1 = bytes[p]
+            p += 1
+
+            #QOI_OP_RGB
+            if b1 == QOI_OP_RGB:
+                r = bytes[p]
+                p += 1
+                g = bytes[p]
+                p += 1
+                b = bytes[p]
+                p += 1
+                px = (r,g,b,255)
+            elif b1 == QOI_OP_RGBA:
+                r = bytes[p]
+                p += 1
+                g = bytes[p]
+                p += 1
+                b = bytes[p]
+                p += 1
+                a = bytes[p]
+                p += 1
+                px = (r,g,b,a)
+            elif ((b1 & QOI_MASK_2) == QOI_OP_INDEX):
+                px = index[b1]
+            elif ((b1 & QOI_MASK_2) == QOI_OP_DIFF):
+                (r,g,b,a) = px
+
+                r = (r + ((b1 >> 4) & 0x03) - 2) % 256
+                g = (g + ((b1 >> 2) & 0x03) - 2) % 256
+                b = (b + ( b1       & 0x03) - 2) % 256
+
+                px = (r,g,b,a)
+            elif ((b1 & QOI_MASK_2) == QOI_OP_LUMA):
+                b2 = bytes[p]
+                p += 1
+
+                (r,g,b,a) = px
+
+                vg = (b1 & 0x3f) - 32
+                r = (r + vg - 8 + ((b2 >> 4) & 0x0f)) % 256
+                g = (g + vg                         ) % 256
+                b = (b + vg - 8 +  (b2       & 0x0f)) % 256
+
+                px = (r,g,b,a)
+
+            elif ((b1 & QOI_MASK_2) == QOI_OP_RUN):
+                run = (b1 & 0x3f)
+            
+            index[QOI_COLOR_HASH(px) % 64] = px
+                
+
+        (r,g,b,a) = px
+        if (channels == 4):
+            pixels[px_pos + 0] = r
+            pixels[px_pos + 1] = g
+            pixels[px_pos + 2] = b
+            pixels[px_pos + 3] = a
+        else:
+            pixels[px_pos + 0] = r
+            pixels[px_pos + 1] = g
+            pixels[px_pos + 2] = b
+
+        px_pos += channels
+    
+    return pixels
 
 def main():
 
-    with open("../images/test2.bin", "rb+") as f:
+    filepath = ""
+    outpath  = ""
+
+    with open(filepath, "rb+") as f:
         bytes = f.read()
 
     data = bytes
 
-    # for b in bytes:
-    #     data += group(b, 1)
-    
-    #print(data)
-    # (qoi_data, len_in_bits) = qoi_encode(data, qoi_desc(153,153,4,0))
-
-    # len_in_bytes = int(len_in_bits / 8)
-
-    # w = bytearray(len_in_bytes)
-
-    # for x in range(len_in_bytes):
-    #     w[x] = ungroup(qoi_data[x*8:(x+1)*8])
-
     w = qoi_encode(data, qoi_desc(628,655,3,0))
 
-    with open("../images/out_test2.qoi", "wb+") as f:
+    with open(outpath, "wb+") as f:
         f.write(w)
 
 if __name__ == "__main__":
