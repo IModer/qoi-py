@@ -4,4 +4,6 @@
 
  a python wrapper around QOI can be found [here](https://github.com/kodonnell/qoi "here")
  
+ 
+ ## To-do
  will add more comments
