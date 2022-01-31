@@ -14,37 +14,59 @@ def getMode(m):
         return 0
 
 def main():
-
     filepath = ""
     outpath  = ""
-    
-    #Open file
-    try:
-        f = Image.open(filepath)
-    except FileNotFoundError:
-        print("The file {} could not be found".format(filepath))
-        exit()
-    except:
-        print("The file {} could not be opened".format(filepath))
-        exit()
 
+    p_mode = 'enc'
 
-    #colorspace = getColorspace(f)
+    if p_mode == 'enc':
 
-    mode = getMode(f.mode)
+        #Open file
+        try:
+            f = Image.open(filepath)
+        except FileNotFoundError:
+            print("The file {} could not be found".format(filepath))
+            exit()
+        except:
+            print("The file {} could not be opened".format(filepath))
+            exit()
 
-    w, h = f.size
-    #                    colorspace hardcoded
-    desc = q.qoi_desc(w, h, mode, 1)
+        #colorspace = getColorspace(f)
 
-    data = f.tobytes()
+        mode = getMode(f.mode)
 
-    w = q.qoi_encode(data, desc)
+        w, h = f.size
+        #                    colorspace hardcoded
+        desc = q.qoi_desc(w, h, mode, 1)
 
-    f.close()
+        data = f.tobytes()
 
-    with open(outpath, "wb+") as f:
-        f.write(w)
+        w = q.qoi_encode(data, desc)
+
+        f.close()
+
+        with open(outpath, "wb+") as f:
+            f.write(w)
+
+    elif p_mode == 'dec':
+
+        try:
+            f = open(filepath, "rb+")
+        except FileNotFoundError:
+            print("The file {} could not be found".format(filepath))
+            exit()
+        except:
+            print("The file {} could not be opened".format(filepath))
+            exit()
+
+        data = f.read()
+        
+        w = q.qoi_decode(data, len(data), 0)
+
+        f.close()
+
+        with open(outpath, "wb+") as f:
+            f.write(w)
 
 if __name__ == "__main__":
     main()
